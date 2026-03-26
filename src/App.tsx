@@ -21,7 +21,7 @@ import { motion, AnimatePresence } from 'motion/react';
 // Voice options available in Gemini TTS
 const VOICES = [
   { id: 'Charon', name: 'হুজুর (শান্ত ও আধ্যাত্মিক)', description: 'হাদিস বা ধর্মীয় আলোচনার জন্য অত্যন্ত উপযুক্ত', category: 'ধর্মীয়' },
-  { id: 'Puck', name: 'হুজুর (গম্ভীর ও প্রাজ্ঞ)', description: 'ওয়াজ বা গুরুগম্ভীর আলোচনার জন্য সেরা', category: 'ধর্মীয়' },
+  { id: 'Puck', name: 'সংবাদ পাঠক (গম্ভীর)', description: 'খবর বা সংবাদ পড়ার জন্য অত্যন্ত উপযুক্ত', category: 'সংবাদ' },
   { id: 'Zephyr', name: 'জেফির (মিষ্টি কণ্ঠ)', description: 'সুন্দর এবং উজ্জ্বল নারী কণ্ঠ', category: 'মেয়ে' },
   { id: 'Kore', name: 'কোরে (পেশাদার)', description: 'পরিষ্কার এবং উষ্ণ নারী কণ্ঠ', category: 'মেয়ে' },
   { id: 'Fenrir', name: 'ফেনরির (সাহসী)', description: 'গতিশীল এবং জোরালো পুরুষ কণ্ঠ', category: 'পুরুষ' },
@@ -71,7 +71,16 @@ export default function App() {
     setAudioUrl(null);
 
     try {
-      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+      // Using the API key provided by the user as a fallback
+      const apiKey = process.env.GEMINI_API_KEY || "AIzaSyC0E9UaeVsiuzJRiNAhuUHE68jprlBbDGs";
+      
+      if (!apiKey) {
+        throw new Error('API Key পাওয়া যায়নি। অনুগ্রহ করে সেটিংস চেক করুন।');
+      }
+
+      const ai = new GoogleGenAI({ apiKey });
+      console.log('Generating speech for text:', text.trim().substring(0, 50) + '...');
+      
       const response = await ai.models.generateContent({
         model: "gemini-2.5-flash-preview-tts",
         contents: [{ parts: [{ text: text.trim() }] }],
@@ -85,26 +94,45 @@ export default function App() {
         },
       });
 
+      console.log('Response received:', response);
+
       const base64Audio = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
       
       if (base64Audio) {
-        const binaryString = atob(base64Audio);
-        const len = binaryString.length;
-        const bytes = new Uint8Array(len);
-        for (let i = 0; i < len; i++) {
-          bytes[i] = binaryString.charCodeAt(i);
-        }
+        try {
+          const binaryString = atob(base64Audio);
+          const len = binaryString.length;
+          const bytes = new Uint8Array(len);
+          for (let i = 0; i < len; i++) {
+            bytes[i] = binaryString.charCodeAt(i);
+          }
 
-        const wavHeader = createWavHeader(len, 24000);
-        const wavBlob = new Blob([wavHeader, bytes], { type: 'audio/wav' });
-        const url = URL.createObjectURL(wavBlob);
-        setAudioUrl(url);
+          const wavHeader = createWavHeader(len, 24000);
+          const wavBlob = new Blob([wavHeader, bytes], { type: 'audio/wav' });
+          const url = URL.createObjectURL(wavBlob);
+          setAudioUrl(url);
+          console.log('Audio generated successfully');
+        } catch (atobErr) {
+          console.error('Base64 decoding error:', atobErr);
+          throw new Error('অডিও ডাটা ডিকোড করতে সমস্যা হয়েছে।');
+        }
       } else {
-        throw new Error('AI থেকে কোনো অডিও পাওয়া যায়নি।');
+        console.error('No audio data in response:', response);
+        throw new Error('AI থেকে কোনো অডিও ডাটা পাওয়া যায়নি।');
       }
     } catch (err: any) {
-      console.error('TTS Error:', err);
-      setError(err.message || 'ভয়েস তৈরি করতে সমস্যা হয়েছে। আবার চেষ্টা করুন।');
+      console.error('TTS Error Details:', err);
+      let errorMessage = 'ভয়েস তৈরি করতে সমস্যা হয়েছে।';
+      
+      if (err.message?.includes('API key not valid')) {
+        errorMessage = 'আপনার API Key সঠিক নয়। অনুগ্রহ করে সেটিংস চেক করুন।';
+      } else if (err.message?.includes('Quota exceeded')) {
+        errorMessage = 'আপনার ফ্রি লিমিট শেষ হয়ে গেছে। কিছুক্ষণ পর আবার চেষ্টা করুন।';
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+      
+      setError(errorMessage);
     } finally {
       setIsGenerating(false);
     }

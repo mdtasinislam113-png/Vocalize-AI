@@ -37,7 +37,7 @@ export default function App() {
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   React.useEffect(() => {
-    const key = process.env.GEMINI_API_KEY || "AIzaSyC0E9UaeVsiuzJRiNAhuUHE68jprlBbDGs";
+    const key = process.env.GEMINI_API_KEY || "AIzaSyAF1h52QztTTw6YPCyiMc-zPVx8rTltsKg";
     if (key && key.length > 10 && !key.includes('MY_GEMINI_API_KEY')) {
       setApiKeyStatus('Set');
     } else {
@@ -85,7 +85,7 @@ export default function App() {
       
       // Robust check for API key
       if (!apiKey || apiKey === "undefined" || apiKey === "null" || apiKey === "MY_GEMINI_API_KEY" || apiKey === "") {
-        apiKey = "AIzaSyC0E9UaeVsiuzJRiNAhuUHE68jprlBbDGs";
+        apiKey = "AIzaSyAF1h52QztTTw6YPCyiMc-zPVx8rTltsKg";
       }
       
       if (!apiKey || apiKey.length < 10) {

@@ -33,7 +33,17 @@ export default function App() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [apiKeyStatus, setApiKeyStatus] = useState<'Checking' | 'Set' | 'Missing'>('Checking');
   const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  React.useEffect(() => {
+    const key = process.env.GEMINI_API_KEY || "AIzaSyC0E9UaeVsiuzJRiNAhuUHE68jprlBbDGs";
+    if (key && key.length > 10 && !key.includes('MY_GEMINI_API_KEY')) {
+      setApiKeyStatus('Set');
+    } else {
+      setApiKeyStatus('Missing');
+    }
+  }, []);
 
   const writeString = (view: DataView, offset: number, string: string) => {
     for (let i = 0; i < string.length; i++) {
@@ -71,13 +81,18 @@ export default function App() {
     setAudioUrl(null);
 
     try {
-      // Using the API key provided by the user as a fallback
-      const apiKey = process.env.GEMINI_API_KEY || "AIzaSyC0E9UaeVsiuzJRiNAhuUHE68jprlBbDGs";
+      let apiKey = process.env.GEMINI_API_KEY;
       
-      if (!apiKey) {
-        throw new Error('API Key পাওয়া যায়নি। অনুগ্রহ করে সেটিংস চেক করুন।');
+      // Robust check for API key
+      if (!apiKey || apiKey === "undefined" || apiKey === "null" || apiKey === "MY_GEMINI_API_KEY" || apiKey === "") {
+        apiKey = "AIzaSyC0E9UaeVsiuzJRiNAhuUHE68jprlBbDGs";
+      }
+      
+      if (!apiKey || apiKey.length < 10) {
+        throw new Error('API Key পাওয়া যায়নি বা এটি সঠিক নয়। অনুগ্রহ করে একটি সঠিক API Key প্রদান করুন।');
       }
 
+      console.log('Using API Key starting with:', apiKey.substring(0, 7) + '...');
       const ai = new GoogleGenAI({ apiKey });
       console.log('Generating speech for text:', text.trim().substring(0, 50) + '...');
       
@@ -164,6 +179,9 @@ export default function App() {
             </div>
           </div>
           <div className="hidden sm:flex items-center gap-4 text-xs font-semibold opacity-40">
+            <span className={`px-2 py-0.5 rounded uppercase text-[9px] font-bold ${apiKeyStatus === 'Set' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
+              API: {apiKeyStatus}
+            </span>
             <span className="flex items-center gap-1"><Radio size={12} className="text-red-500 animate-pulse" /> LIVE</span>
             <span className="w-1 h-1 bg-black/20 rounded-full" />
             <span>GEMINI 2.5 TTS</span>

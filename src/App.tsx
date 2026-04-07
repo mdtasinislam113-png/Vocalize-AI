@@ -17,6 +17,7 @@ import {
   Mic2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { Analytics } from '@vercel/analytics/react';
 
 // Voice options available in Gemini TTS
 const VOICES = [
@@ -387,6 +388,7 @@ export default function App() {
           font-style: italic;
         }
       `}} />
+      <Analytics />
     </div>
   );
 }
